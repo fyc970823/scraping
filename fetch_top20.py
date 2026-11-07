@@ -16,7 +16,7 @@ for col in ["TradeVolume", "ClosingPrice", "Change"]:
         errors="coerce",
     )
 
-top20 = df.sort_values("TradeVolume", ascending=False).head(20)
+top20 = df.sort_values("TradeVolume", ascending=False).head(100)
 
 # 民國日期轉西元，例如 1151107 -> 2026-11-07
 raw = str(top20.iloc[0]["Date"])
@@ -24,7 +24,7 @@ date = f"{int(raw[:-4]) + 1911}-{raw[-4:-2]}-{raw[-2:]}"
 
 lines = [
     "---",
-    f"title: 台股成交量前 20 名（{date}）",
+    f"title: 台股成交量前 100 名（{date}）",
     f"date: {date} 15:30:00",
     "categories: 台股",
     "tags: 台股",

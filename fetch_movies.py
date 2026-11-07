@@ -6,14 +6,21 @@ API_KEY = os.environ.get("TMDB_API_KEY")
 if not API_KEY:
     raise SystemExit("找不到環境變數 TMDB_API_KEY")
 
-res = requests.get(
-    "https://api.themoviedb.org/3/movie/now_playing",
-    params={"api_key": API_KEY, "language": "zh-TW", "region": "TW", "page": 1},
-    timeout=15,
-)
-res.raise_for_status()
-data = res.json()
-movies = data.get("results", [])[:20]
+movies = []
+page = 1
+while len(movies) < 100:
+    res = requests.get(
+        "https://api.themoviedb.org/3/movie/now_playing",
+        params={"api_key": API_KEY, "language": "zh-TW", "region": "TW", "page": page},
+        timeout=15,
+    )
+    res.raise_for_status()
+    data = res.json()
+    movies.extend(data.get("results", []))
+    if page >= data.get("total_pages", 1):
+        break
+    page += 1
+movies = movies[:100]
 
 def clean(text):
     return (text or "").replace("|", "｜").replace("\n", " ").strip()
