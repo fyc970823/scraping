@@ -4,10 +4,10 @@
 
 # Site
 title: "台股成交量排行"
-subtitle: "網站副標題"
-description: "網站簡介"
+subtitle: ""
+description: ""
 keywords: 關鍵字1, 關鍵字2, ...
-author: "你的名字"
+author: "fyc970823"
 language: zh-TW
 timezone: Asia/Taipei
 
