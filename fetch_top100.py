@@ -16,10 +16,10 @@ for col in ["TradeVolume", "ClosingPrice", "Change"]:
         errors="coerce",
     )
 
-top20 = df.sort_values("TradeVolume", ascending=False).head(100)
+top100 = df.sort_values("TradeVolume", ascending=False).head(100)
 
 # 民國日期轉西元，例如 1151107 -> 2026-11-07
-raw = str(top20.iloc[0]["Date"])
+raw = str(top100.iloc[0]["Date"])
 date = f"{int(raw[:-4]) + 1911}-{raw[-4:-2]}-{raw[-2:]}"
 
 lines = [
@@ -35,7 +35,7 @@ lines = [
     "| # | 代號 | 名稱 | 收盤價 | 漲跌 | 成交量（股） |",
     "|--:|:--|:--|--:|--:|--:|",
 ]
-for i, (_, r) in enumerate(top20.iterrows(), 1):
+for i, (_, r) in enumerate(top100.iterrows(), 1):
     change = "" if pd.isna(r["Change"]) else f"{r['Change']:+g}"
     lines.append(
         f"| {i} | {r['Code']} | {r['Name']} | {r['ClosingPrice']:g} "
@@ -43,7 +43,7 @@ for i, (_, r) in enumerate(top20.iterrows(), 1):
     )
 
 os.makedirs("source/_posts", exist_ok=True)
-path = f"source/_posts/top20-{date}.md"
+path = f"source/_posts/top100-{date}.md"
 with open(path, "w", encoding="utf-8") as f:
     f.write("\n".join(lines) + "\n")
 
