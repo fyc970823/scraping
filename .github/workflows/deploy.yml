@@ -5,15 +5,15 @@ on:
     branches:
       - main
   schedule:
-    - cron: "30 7 * * 1-5"      # 新增：台灣時間 15:30，週一到週五
-  workflow_dispatch:             # 新增：可手動執行
+    - cron: "30 7 * * 1-5"   # UTC 07:30 = 台灣時間 15:30，週一到週五
+  workflow_dispatch:          # 允許在 Actions 頁面手動執行
 
 concurrency:
-  group: hexo-deployment-${{ github.head_ref || github.ref }}
+  group: hexo-deployment-${{ github.ref }}
   cancel-in-progress: true
 
 permissions:
-  contents: write                # 改成 write，才能把新文章存回儲存庫
+  contents: write             # 需要寫入，才能把新資料存回儲存庫
   pages: write
   id-token: write
 
@@ -24,28 +24,28 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v6
         with:
-          submodules: recursive
           fetch-depth: 0
 
-      # ---- 新增：抓資料 ----
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.13"
 
-      - name: Fetch top 20
+      - name: Fetch data
+        env:
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
         run: |
           pip install -r requirements.txt
           python fetch_top20.py
+          python fetch_movies.py
 
-      - name: Save new post
+      - name: Save new data
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-          git add source/_posts
-          git diff --staged --quiet || git commit -m "Add daily top 20"
+          git add source/_posts source/movies
+          git diff --staged --quiet || git commit -m "Update daily data"
           git push
-      # ---- 新增結束 ----
 
       - name: Setup Node.js
         uses: actions/setup-node@v6

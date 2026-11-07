@@ -26,6 +26,7 @@ lines = [
     "---",
     f"title: 台股成交量前 20 名（{date}）",
     f"date: {date} 15:30:00",
+    "categories: 台股",
     "tags: 台股",
     "---",
     "",
