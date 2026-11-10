@@ -5,7 +5,9 @@ on:
     branches:
       - main
   schedule:
-    - cron: "30 7 * * 1-5"   # UTC 07:30 = 台灣時間 15:30，週一到週五
+    - cron: "30 7 * * *"    # 台灣 15:30
+    - cron: "30 9 * * *"    # 台灣 17:30
+    - cron: "30 12 * * *"   # 台灣 20:30
   workflow_dispatch:          # 允許在 Actions 頁面手動執行
 
 concurrency:
