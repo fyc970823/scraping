@@ -1,75 +1,78 @@
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 import os
 import sys
-import time
 
 import pandas as pd
 import requests
 
+try:
+    sys.stdout.reconfigure(encoding="utf-8")
+except Exception:
+    pass
+
 URL = "https://openapi.twse.com.tw/v1/exchangeReport/STOCK_DAY_ALL"
-headers = {"User-Agent": "Mozilla/5.0"}
+headers = {"User-Agent": "Mozilla/5.0", "Cache-Control": "no-cache"}
 
-# TWSE 的每日彙總資料可能在收盤後延遲發布。CI 在台灣時間 15:30 執行時，
-# 若暫時還是前一個交易日，於平日重試最多一小時，避免過早略過台股文章。
-RETRY_INTERVAL_SECONDS = 5 * 60
-MAX_RETRY_SECONDS = 60 * 60
+res = requests.get(URL, headers=headers, timeout=15)
+res.raise_for_status()
+df = pd.DataFrame(res.json())
 
-taipei_tz = timezone(timedelta(hours=8))
-today = datetime.now(taipei_tz).date()
-deadline = datetime.now(taipei_tz) + timedelta(seconds=MAX_RETRY_SECONDS)
+required = ["Date", "Code", "Name", "TradeVolume", "TradeValue", "ClosingPrice", "Change"]
+missing = [c for c in required if c not in df.columns]
+if df.empty or missing:
+    raise SystemExit(f"TWSE API 沒有回傳可用資料，或缺少欄位：{missing}")
 
-while True:
-    res = requests.get(URL, headers=headers, timeout=15)
-    res.raise_for_status()
-    df = pd.DataFrame(res.json())
-    print("欄位：", list(df.columns))
+raw_dates = df["Date"].dropna().astype(str).str.strip()
+valid_dates = raw_dates[raw_dates.str.fullmatch(r"\d{7}")]
+if valid_dates.empty:
+    raise SystemExit(f"日期格式不正確：{raw_dates.head(3).tolist()!r}")
 
-    if df.empty or "Date" not in df.columns:
-        raise SystemExit("TWSE API 沒有回傳可用的交易資料或 Date 欄位。")
-
-    # 取 API 回傳資料中最新的民國日期（格式例如 1151109）。
-    raw_dates = df["Date"].dropna().astype(str).str.strip()
-    valid_dates = raw_dates[raw_dates.str.fullmatch(r"\d{7}")]
-    if valid_dates.empty:
-        raise SystemExit(f"TWSE API 回傳的日期格式不正確：{raw_dates.head(3).tolist()!r}")
-
-    raw = max(valid_dates)
-    roc_year, month, day = int(raw[:3]), int(raw[3:5]), int(raw[5:7])
-    try:
-        market_date = datetime(roc_year + 1911, month, day).date()
-    except ValueError as exc:
-        raise SystemExit(f"TWSE API 回傳了無效日期：{raw!r}") from exc
-
-    if market_date > today:
-        raise SystemExit(f"TWSE API 日期 {market_date} 晚於台灣今天 {today}，請檢查 API 資料。")
-    if market_date == today:
-        break
-
-    now = datetime.now(taipei_tz)
-    # 週末一定不是交易日，直接略過；平日則考慮資料尚未發布而繼續輪詢。
-    if today.weekday() >= 5 or now >= deadline:
-        print(
-            f"::notice::略過台股文章：TWSE 最新資料日期為 {market_date}，"
-            f"台灣今天是 {today}。已等待資料更新；可能是休市日或資料尚未發布。"
-        )
-        sys.exit(0)
-
-    remaining = (deadline - now).total_seconds()
-    print(
-        f"::notice::TWSE 最新資料仍為 {market_date}，台灣今天是 {today}；"
-        f"{min(RETRY_INTERVAL_SECONDS, int(remaining))} 秒後重試。"
-    )
-    time.sleep(min(RETRY_INTERVAL_SECONDS, remaining))
+raw = max(valid_dates)
+try:
+    market_date = datetime(int(raw[:3]) + 1911, int(raw[3:5]), int(raw[5:7])).date()
+except ValueError as exc:
+    raise SystemExit(f"無效日期：{raw!r}") from exc
 
 date = market_date.isoformat()
+path = f"source/_posts/top100-{date}.md"
 
-for col in ["TradeVolume", "ClosingPrice", "Change"]:
+# 這一天已經有文章：休市日，或已經處理過
+if os.path.exists(path):
+    print(f"::notice::{date} 的文章已存在，沒有新交易日資料，略過。")
+    raise SystemExit(0)
+
+for col in ["TradeVolume", "TradeValue", "ClosingPrice", "Change"]:
     df[col] = pd.to_numeric(
         df[col].astype(str).str.replace(",", "").str.strip(),
         errors="coerce",
     )
 
 top100 = df.sort_values("TradeVolume", ascending=False).head(100)
+
+up = int((df["Change"] > 0).sum())
+down = int((df["Change"] < 0).sum())
+flat = int((df["Change"] == 0).sum())
+total_volume = int(df["TradeVolume"].sum())
+total_value = int(df["TradeValue"].sum())
+
+summary = [
+    f"[{date} 台股概況]",
+    f"上漲 {up} 檔、下跌 {down} 檔、平盤 {flat} 檔",
+    f"總成交量 {total_volume:,} 股、總成交值 {total_value:,} 元",
+    "成交量前 5 名：",
+]
+for i, (_, r) in enumerate(top100.head(5).iterrows(), 1):
+    change = "" if pd.isna(r["Change"]) else f"{r['Change']:+g}"
+    summary.append(
+        f"  {i}. {r['Code']} {r['Name']}  收 {r['ClosingPrice']:g} ({change})  "
+        f"量 {int(r['TradeVolume']):,}"
+    )
+print("\n".join(summary))
+
+step_summary = os.environ.get("GITHUB_STEP_SUMMARY")
+if step_summary:
+    with open(step_summary, "a", encoding="utf-8") as f:
+        f.write("\n".join(summary) + "\n")
 
 lines = [
     "---",
@@ -78,6 +81,9 @@ lines = [
     "categories: 台股",
     "tags: 台股",
     "---",
+    "",
+    f"**{date} 市場概況**：上漲 {up} 檔、下跌 {down} 檔、平盤 {flat} 檔；"
+    f"總成交量 {total_volume:,} 股。",
     "",
     "資料來源：臺灣證券交易所 OpenAPI",
     "",
@@ -92,7 +98,6 @@ for i, (_, r) in enumerate(top100.iterrows(), 1):
     )
 
 os.makedirs("source/_posts", exist_ok=True)
-path = f"source/_posts/top100-{date}.md"
 with open(path, "w", encoding="utf-8") as f:
     f.write("\n".join(lines) + "\n")
 
