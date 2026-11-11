@@ -6,7 +6,7 @@ menu:
   Home: /
   Archives: /archives
 # RSS link
-rss: /atom.xml
+rss: https://www.youtube.com/@fyc970823
 # Path of title banner image of page top
 banner: /scraping/images/banner.png
 # Subtitle of page top
@@ -88,3 +88,4 @@ valine:
   lang: zh-cn # i18n: zh-cn/en
   placeholder: Just go go # valine comment input placeholder(like: Please leave your footprints )
   guest_info: nick,mail,link #valine comment header info
+
