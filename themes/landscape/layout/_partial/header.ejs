@@ -27,11 +27,7 @@
         <% if (theme.rss){ %>
           <a class="nav-icon" href="<%- url_for(theme.rss) %>" title="<%= __('rss_feed') %>"><span class="fa fa-rss"></span></a>
         <% } %>
-        <a class="nav-icon nav-search-btn" title="<%= __('search') %>"><span class="fa fa-search"></span></a>
       </nav>
-      <div id="search-form-wrap">
-        <%- search_form({button: '&#xF002;', text: __('search')}) %>
-      </div>
     </div>
   </div>
 </header>
