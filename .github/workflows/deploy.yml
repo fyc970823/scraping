@@ -5,9 +5,9 @@ on:
     branches:
       - main
   schedule:
-    - cron: "30 7 * * *"   
-    - cron: "30 15 * * *"  
-    - cron: "30 23 * * *"  
+    - cron: "00 8 * * *"   
+    - cron: "00 16 * * *"  
+    - cron: "00 00 * * *"  
   workflow_dispatch:          # 允許在 Actions 頁面手動執行
 
 concurrency:
