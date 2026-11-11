@@ -6,8 +6,8 @@ on:
       - main
   schedule:
     - cron: "30 7 * * *"    # 台灣 15:30
-    - cron: "30 9 * * *"    # 台灣 17:30
-    - cron: "30 12 * * *"   # 台灣 20:30
+    - cron: "30 15 * * *"    # 台灣 17:30
+    - cron: "30 23 * * *"   # 台灣 20:30
   workflow_dispatch:          # 允許在 Actions 頁面手動執行
 
 concurrency:
